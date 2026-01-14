@@ -3,6 +3,8 @@
  * Utilise HttpService pour communiquer avec Roblox
  */
 
+import { RobloxDataStoreClient } from './RobloxDataStoreClient.js';
+
 export class SecurityAPI {
     constructor() {
         this.robloxClient = new RobloxDataStoreClient();
