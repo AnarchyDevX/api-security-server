@@ -1,0 +1,181 @@
+/**
+ * Système de Challenge Serveur - Zero-Trust Roblox
+ * 
+ * Remplace l'HMAC côté Roblox par un challenge signé serveur uniquement
+ * Aucun secret côté Roblox = impossible à spoof
+ */
+
+import crypto from 'crypto';
+
+export class ChallengeController {
+    constructor() {
+        this.challenges = new Map(); // challengeToken -> { universeId, placeId, expiresAt }
+        this.CHALLENGE_TTL_MS = 10 * 1000; // 10 secondes
+        this.CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || this.generateSecret();
+        
+        // Nettoyer les challenges expirés toutes les 30 secondes
+        setInterval(() => this.cleanExpiredChallenges(), 30 * 1000);
+        
+        console.log('[ChallengeController] Initialized with challenge-based auth');
+    }
+
+    /**
+     * Génère un secret pour signer les challenges
+     */
+    generateSecret() {
+        const secret = crypto.randomBytes(32).toString('hex');
+        console.warn('[ChallengeController] Generated new CHALLENGE_SECRET (add to .env):', secret);
+        return secret;
+    }
+
+    /**
+     * Crée un challenge pour un universe/place
+     */
+    createChallenge(universeId, placeId) {
+        // Vérifier que l'universe est autorisé
+        const universeSecrets = this.getUniverseSecrets();
+        if (!universeSecrets.has(universeId)) {
+            return null;
+        }
+
+        // Générer un token unique
+        const challengeToken = crypto.randomBytes(32).toString('hex');
+        
+        // Créer le challenge signé
+        const challengeData = {
+            universeId,
+            placeId,
+            timestamp: Date.now(),
+            nonce: challengeToken
+        };
+        
+        const message = `${universeId}|${placeId}|${challengeData.timestamp}|${challengeToken}`;
+        const signature = crypto
+            .createHmac('sha256', this.CHALLENGE_SECRET)
+            .update(message)
+            .digest('hex');
+        
+        const signedChallenge = {
+            token: challengeToken,
+            signature,
+            expiresAt: Date.now() + this.CHALLENGE_TTL_MS
+        };
+        
+        // Stocker le challenge
+        this.challenges.set(challengeToken, {
+            universeId,
+            placeId,
+            expiresAt: signedChallenge.expiresAt,
+            used: false
+        });
+        
+        return signedChallenge;
+    }
+
+    /**
+     * Vérifie et consomme un challenge
+     */
+    verifyAndConsumeChallenge(challengeToken, providedSignature, universeId, placeId) {
+        // Vérifier que le challenge existe
+        const challenge = this.challenges.get(challengeToken);
+        if (!challenge) {
+            return { valid: false, reason: 'CHALLENGE_NOT_FOUND' };
+        }
+        
+        // Vérifier qu'il n'a pas été utilisé
+        if (challenge.used) {
+            return { valid: false, reason: 'CHALLENGE_ALREADY_USED' };
+        }
+        
+        // Vérifier qu'il n'est pas expiré
+        if (Date.now() > challenge.expiresAt) {
+            this.challenges.delete(challengeToken);
+            return { valid: false, reason: 'CHALLENGE_EXPIRED' };
+        }
+        
+        // Vérifier que l'universeId correspond
+        if (challenge.universeId !== universeId) {
+            return { valid: false, reason: 'UNIVERSE_MISMATCH' };
+        }
+        
+        // Vérifier que le placeId correspond
+        if (challenge.placeId !== placeId) {
+            return { valid: false, reason: 'PLACE_MISMATCH' };
+        }
+        
+        // Vérifier la signature
+        const message = `${challenge.universeId}|${challenge.placeId}|${challenge.expiresAt - this.CHALLENGE_TTL_MS}|${challengeToken}`;
+        const expectedSignature = crypto
+            .createHmac('sha256', this.CHALLENGE_SECRET)
+            .update(message)
+            .digest('hex');
+        
+        if (!crypto.timingSafeEqual(
+            Buffer.from(expectedSignature, 'hex'),
+            Buffer.from(providedSignature, 'hex')
+        )) {
+            return { valid: false, reason: 'INVALID_SIGNATURE' };
+        }
+        
+        // Marquer comme utilisé et supprimer
+        this.challenges.delete(challengeToken);
+        
+        return { 
+            valid: true, 
+            universeId: challenge.universeId,
+            placeId: challenge.placeId
+        };
+    }
+
+    /**
+     * Récupère les secrets d'universes autorisés
+     */
+    getUniverseSecrets() {
+        const secrets = new Map();
+        try {
+            const secretsEnv = process.env.ROBLOX_UNIVERSE_SECRETS;
+            if (secretsEnv) {
+                const parsed = JSON.parse(secretsEnv);
+                for (const [universeId] of Object.entries(parsed)) {
+                    secrets.set(Number(universeId), true);
+                }
+            }
+        } catch (error) {
+            console.error('[ChallengeController] Error loading universe secrets:', error);
+        }
+        return secrets;
+    }
+
+    /**
+     * Nettoie les challenges expirés
+     */
+    cleanExpiredChallenges() {
+        const now = Date.now();
+        let cleaned = 0;
+        for (const [token, challenge] of this.challenges.entries()) {
+            if (now > challenge.expiresAt) {
+                this.challenges.delete(token);
+                cleaned++;
+            }
+        }
+        if (cleaned > 0) {
+            console.log(`[ChallengeController] Cleaned ${cleaned} expired challenges`);
+        }
+        
+        // Protection DoS: limiter la taille du cache
+        if (this.challenges.size > 10000) {
+            console.warn('[ChallengeController] Challenge cache too large, clearing');
+            this.challenges.clear();
+        }
+    }
+
+    /**
+     * Statistiques (pour monitoring)
+     */
+    getStats() {
+        return {
+            activeChallenges: this.challenges.size,
+            ttl: this.CHALLENGE_TTL_MS
+        };
+    }
+}
