@@ -80,27 +80,33 @@ export class ChallengeController {
         // Vérifier que le challenge existe
         const challenge = this.challenges.get(challengeToken);
         if (!challenge) {
+            console.warn(`[ChallengeController] Challenge not found: ${challengeToken.substring(0, 8)}...`);
             return { valid: false, reason: 'CHALLENGE_NOT_FOUND' };
         }
         
         // Vérifier qu'il n'a pas été utilisé
         if (challenge.used) {
+            console.warn(`[ChallengeController] Challenge already used: ${challengeToken.substring(0, 8)}...`);
             return { valid: false, reason: 'CHALLENGE_ALREADY_USED' };
         }
         
         // Vérifier qu'il n'est pas expiré
-        if (Date.now() > challenge.expiresAt) {
+        const now = Date.now();
+        if (now > challenge.expiresAt) {
+            console.warn(`[ChallengeController] Challenge expired: ${challengeToken.substring(0, 8)}... (now: ${now}, expires: ${challenge.expiresAt})`);
             this.challenges.delete(challengeToken);
             return { valid: false, reason: 'CHALLENGE_EXPIRED' };
         }
         
         // Vérifier que l'universeId correspond
         if (challenge.universeId !== universeId) {
+            console.warn(`[ChallengeController] Universe mismatch: expected ${challenge.universeId}, got ${universeId}`);
             return { valid: false, reason: 'UNIVERSE_MISMATCH' };
         }
         
         // Vérifier que le placeId correspond
         if (challenge.placeId !== placeId) {
+            console.warn(`[ChallengeController] Place mismatch: expected ${challenge.placeId}, got ${placeId}`);
             return { valid: false, reason: 'PLACE_MISMATCH' };
         }
         
@@ -115,6 +121,8 @@ export class ChallengeController {
             Buffer.from(expectedSignature, 'hex'),
             Buffer.from(providedSignature, 'hex')
         )) {
+            console.warn(`[ChallengeController] Invalid signature for challenge ${challengeToken.substring(0, 8)}...`);
+            console.warn(`[ChallengeController] Expected: ${expectedSignature.substring(0, 16)}..., Got: ${providedSignature.substring(0, 16)}...`);
             return { valid: false, reason: 'INVALID_SIGNATURE' };
         }
         

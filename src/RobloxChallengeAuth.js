@@ -100,7 +100,7 @@ export class RobloxChallengeAuth {
                     universeId,
                     placeId
                 });
-                return res.status(401).json({ error: 'Invalid or expired challenge' });
+                return res.status(401).json({ error: 'Invalid or expired challenge', reason: verification.reason });
             }
 
             // Ajouter les infos au request
