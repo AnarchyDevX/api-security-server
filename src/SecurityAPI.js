@@ -4,35 +4,50 @@
  */
 
 import { RobloxDataStoreClient } from './RobloxDataStoreClient.js';
+import { PlacesStorage } from './PlacesStorage.js';
 
 export class SecurityAPI {
     constructor() {
         this.robloxClient = new RobloxDataStoreClient();
+        this.placesStorage = new PlacesStorage();
     }
 
     /**
      * Récupère les Place IDs autorisés
-     * NOTE: Nécessite que le script Roblox expose cette info via un DataStore
      */
     async getAuthorizedPlaces() {
-        // Pour l'instant, on retourne un tableau vide
-        // Vous pouvez implémenter une méthode pour lire depuis un DataStore partagé
-        // ou utiliser l'API Roblox DataStore directement
-        return [];
+        return await this.placesStorage.getPlaces();
     }
 
     /**
      * Ajoute un Place ID
      */
     async addPlace(placeId) {
-        return await this.robloxClient.addPlace(placeId);
+        // Ajouter dans le stockage local
+        await this.placesStorage.addPlace(placeId);
+        // Envoyer la commande à Roblox (optionnel)
+        await this.robloxClient.addPlace(placeId);
+        return true;
+    }
+
+    /**
+     * Ajoute un Place ID (alias pour compatibilité)
+     */
+    async addAuthorizedPlace(placeId) {
+        return await this.addPlace(placeId);
     }
 
     /**
      * Retire un Place ID
      */
     async removePlace(placeId) {
-        return await this.robloxClient.removePlace(placeId);
+        // Retirer du stockage local
+        const removed = await this.placesStorage.removePlace(placeId);
+        // Envoyer la commande à Roblox (optionnel)
+        if (removed) {
+            await this.robloxClient.removePlace(placeId);
+        }
+        return removed;
     }
 
     /**

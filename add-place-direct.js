@@ -21,7 +21,7 @@ console.log(`➕ Ajout de la place ${placeId}...`);
 
 try {
     const securityAPI = new SecurityAPI();
-    const success = await securityAPI.addAuthorizedPlace(placeId);
+    const success = await securityAPI.addPlace(placeId);
     
     if (success) {
         console.log(`✅ Place ${placeId} ajoutée avec succès!`);
