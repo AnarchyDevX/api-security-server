@@ -70,6 +70,8 @@ export class ChallengeController {
             used: false
         });
         
+        console.log(`[ChallengeController] Challenge créé: ${challengeToken.substring(0, 8)}... pour universe ${universeId}, place ${placeId}. Cache size: ${this.challenges.size}`);
+        
         return signedChallenge;
     }
 
@@ -77,6 +79,9 @@ export class ChallengeController {
      * Vérifie et consomme un challenge
      */
     verifyAndConsumeChallenge(challengeToken, providedSignature, universeId, placeId) {
+        console.log(`[ChallengeController] Vérification challenge: ${challengeToken.substring(0, 8)}... pour universe ${universeId}, place ${placeId}. Cache size: ${this.challenges.size}`);
+        console.log(`[ChallengeController] Challenges dans le cache:`, Array.from(this.challenges.keys()).map(k => k.substring(0, 8) + '...'));
+        
         // Vérifier que le challenge existe
         const challenge = this.challenges.get(challengeToken);
         if (!challenge) {

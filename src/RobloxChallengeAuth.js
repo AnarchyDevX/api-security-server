@@ -40,8 +40,11 @@ export class RobloxChallengeAuth {
             const challenge = this.challengeController.createChallenge(universeId, placeId);
             
             if (!challenge) {
+                console.warn(`[RobloxChallengeAuth] Challenge creation failed for universe ${universeId}, place ${placeId}`);
                 return res.status(403).json({ error: 'Unauthorized universe' });
             }
+            
+            console.log(`[RobloxChallengeAuth] Challenge créé et retourné: ${challenge.token.substring(0, 8)}...`);
 
             // Retourner le challenge (sans révéler le secret)
             res.json({
