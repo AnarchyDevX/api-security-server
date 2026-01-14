@@ -7,10 +7,19 @@
 
 export function robloxOnlyMiddleware(req, res, next) {
     // Vérifier que la requête a les headers Roblox
+    // Supporte deux systèmes :
+    // 1. Ancien système HMAC : x-roblox-signature
+    // 2. Nouveau système Challenge : x-roblox-challenge-token + x-roblox-challenge-signature
+    const hasUniverseId = req.headers['x-roblox-universe-id'];
+    const hasPlaceId = req.headers['x-roblox-place-id'];
+    const hasOldSignature = req.headers['x-roblox-signature'];
+    const hasChallengeToken = req.headers['x-roblox-challenge-token'];
+    const hasChallengeSignature = req.headers['x-roblox-challenge-signature'];
+    
     const hasRobloxHeaders = 
-        req.headers['x-roblox-universe-id'] &&
-        req.headers['x-roblox-place-id'] &&
-        req.headers['x-roblox-signature'];
+        hasUniverseId &&
+        hasPlaceId &&
+        (hasOldSignature || (hasChallengeToken && hasChallengeSignature));
 
     if (!hasRobloxHeaders) {
         // Log la tentative d'accès non autorisée
