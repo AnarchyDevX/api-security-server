@@ -61,10 +61,11 @@ export class ChallengeController {
             expiresAt: Date.now() + this.CHALLENGE_TTL_MS
         };
         
-        // Stocker le challenge
+        // Stocker le challenge (avec le timestamp original pour la vérification)
         this.challenges.set(challengeToken, {
             universeId,
             placeId,
+            timestamp: challengeData.timestamp, // Timestamp original utilisé dans la signature
             expiresAt: signedChallenge.expiresAt,
             used: false
         });
@@ -103,8 +104,8 @@ export class ChallengeController {
             return { valid: false, reason: 'PLACE_MISMATCH' };
         }
         
-        // Vérifier la signature
-        const message = `${challenge.universeId}|${challenge.placeId}|${challenge.expiresAt - this.CHALLENGE_TTL_MS}|${challengeToken}`;
+        // Vérifier la signature (utiliser le timestamp original stocké)
+        const message = `${challenge.universeId}|${challenge.placeId}|${challenge.timestamp}|${challengeToken}`;
         const expectedSignature = crypto
             .createHmac('sha256', this.CHALLENGE_SECRET)
             .update(message)
