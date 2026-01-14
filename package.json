@@ -17,7 +17,15 @@
     "express-rate-limit": "^7.1.5",
     "fast-json-stable-stringify": "^2.1.0"
   },
-  "keywords": ["roblox", "admin", "security", "api"],
+  "keywords": [
+    "roblox",
+    "admin",
+    "security",
+    "api"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
