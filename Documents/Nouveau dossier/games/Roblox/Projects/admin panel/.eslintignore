@@ -1,3 +1,0 @@
-# Exclure le serveur API Node.js du linting Roblox-TS
-api-security-server/
-roblox-integration/
