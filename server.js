@@ -186,11 +186,11 @@ app.get('/health', (req, res) => {
 });
 
 // Démarrage
-// Écouter sur toutes les interfaces (0.0.0.0) pour être accessible depuis l'extérieur
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🔒 Security API running on port ${PORT}`);
-    console.log(`📝 Endpoints available at:`);
-    console.log(`   - http://localhost:${PORT}/api (local)`);
-    console.log(`   - http://YOUR_VPS_IP:${PORT}/api (depuis l'extérieur)`);
-    console.log(`   - http://YOUR_DOMAIN:${PORT}/api (si domaine configuré)`);
+// Écouter uniquement sur localhost (sécurisé - accessible uniquement via Nginx)
+app.listen(PORT, '127.0.0.1', () => {
+    console.log(`🔒 Security API running on localhost:${PORT}`);
+    console.log(`⚠️  Accessible uniquement via Nginx reverse proxy (HTTPS)`);
+    console.log(`📝 Endpoints:`);
+    console.log(`   - https://YOUR_DOMAIN_OR_IP/api (via Nginx)`);
+    console.log(`   - https://YOUR_DOMAIN_OR_IP/health (health check)`);
 });
