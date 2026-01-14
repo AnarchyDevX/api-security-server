@@ -10,7 +10,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const STORAGE_FILE = path.join(__dirname, '../../data/authorized-places.json');
+// Utiliser un chemin absolu basé sur le répertoire de travail ou le répertoire du projet
+const PROJECT_ROOT = process.cwd();
+const STORAGE_FILE = path.join(PROJECT_ROOT, 'data/authorized-places.json');
 
 export class PlacesStorage {
     constructor() {
