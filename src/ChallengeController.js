@@ -89,11 +89,14 @@ export class ChallengeController {
             return { valid: false, reason: 'CHALLENGE_NOT_FOUND' };
         }
         
-        // Vérifier qu'il n'a pas été utilisé
+        // Vérifier qu'il n'a pas été utilisé (marquer immédiatement pour éviter les conditions de course)
         if (challenge.used) {
             console.warn(`[ChallengeController] Challenge already used: ${challengeToken.substring(0, 8)}...`);
             return { valid: false, reason: 'CHALLENGE_ALREADY_USED' };
         }
+        
+        // Marquer comme utilisé IMMÉDIATEMENT pour éviter les conditions de course
+        challenge.used = true;
         
         // Vérifier qu'il n'est pas expiré
         const now = Date.now();
@@ -106,12 +109,14 @@ export class ChallengeController {
         // Vérifier que l'universeId correspond
         if (challenge.universeId !== universeId) {
             console.warn(`[ChallengeController] Universe mismatch: expected ${challenge.universeId}, got ${universeId}`);
+            this.challenges.delete(challengeToken);
             return { valid: false, reason: 'UNIVERSE_MISMATCH' };
         }
         
         // Vérifier que le placeId correspond
         if (challenge.placeId !== placeId) {
             console.warn(`[ChallengeController] Place mismatch: expected ${challenge.placeId}, got ${placeId}`);
+            this.challenges.delete(challengeToken);
             return { valid: false, reason: 'PLACE_MISMATCH' };
         }
         
@@ -128,10 +133,11 @@ export class ChallengeController {
         )) {
             console.warn(`[ChallengeController] Invalid signature for challenge ${challengeToken.substring(0, 8)}...`);
             console.warn(`[ChallengeController] Expected: ${expectedSignature.substring(0, 16)}..., Got: ${providedSignature.substring(0, 16)}...`);
+            this.challenges.delete(challengeToken);
             return { valid: false, reason: 'INVALID_SIGNATURE' };
         }
         
-        // Marquer comme utilisé et supprimer
+        // Supprimer le challenge après validation réussie
         this.challenges.delete(challengeToken);
         
         return { 
