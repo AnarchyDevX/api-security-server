@@ -31,7 +31,7 @@ fi
 
 # Obtenir le token
 echo "🔐 Connexion à l'API..."
-LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/auth/login \
+LOGIN_RESPONSE=$(curl -s -X POST http://51.91.100.208/api/auth/login \
   -H "Content-Type: application/json" \
   -d "{\"password\":\"$PASSWORD\"}")
 
@@ -44,7 +44,7 @@ if echo "$LOGIN_RESPONSE" | grep -q "token"; then
     PLACE_ID=${1:-130305949126944}
     
     echo "➕ Ajout de la place $PLACE_ID..."
-    ADD_RESPONSE=$(curl -s -X POST http://localhost:3000/api/security/places/add \
+    ADD_RESPONSE=$(curl -s -X POST http://51.91.100.208/api/security/places/add \
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
       -d "{\"placeId\":$PLACE_ID}")
