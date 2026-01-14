@@ -21,6 +21,9 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { SecurityAPI } from './src/SecurityAPI.js';
 import { AuthMiddleware } from './src/AuthMiddleware.js';
+import { RobloxChallengeAuth } from './src/RobloxChallengeAuth.js';
+import { robloxOnlyMiddleware } from './src/RobloxOnlyMiddleware.js';
+import { RateLimiterByUniverse } from './src/RateLimiterByUniverse.js';
 
 dotenv.config();
 
@@ -62,6 +65,8 @@ app.set('trust proxy', 1);
 // Initialisation
 const securityAPI = new SecurityAPI();
 const authMiddleware = new AuthMiddleware();
+const robloxChallengeAuth = new RobloxChallengeAuth();
+const rateLimiter = new RateLimiterByUniverse();
 
 // Routes publiques
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
@@ -91,6 +96,56 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     }
 });
 
+// ===== ROUTES ROBLOX (Challenge-based auth) =====
+// Endpoint pour demander un challenge (PUBLIC - pas de protection)
+app.post('/api/roblox/challenge', (req, res) => {
+	robloxChallengeAuth.requestChallenge(req, res);
+});
+
+// Routes Roblox protégées (challenge + rate limiting)
+// Note: /api/roblox/challenge est exclu car c'est l'endpoint pour obtenir le challenge
+const robloxSecurityMiddleware = [
+	robloxOnlyMiddleware,
+	robloxChallengeAuth.verifyChallengeRequest.bind(robloxChallengeAuth),
+	(req, res, next) => {
+		const universeId = req.roblox?.universeId;
+		if (!universeId) {
+			return res.status(401).json({ error: 'Unauthorized' });
+		}
+		const limit = rateLimiter.checkLimit(universeId);
+		if (!limit.allowed) {
+			return res.status(429).json({ 
+				error: 'Too many requests', 
+				resetAt: limit.resetAt 
+			});
+		}
+		next();
+	}
+];
+
+// Endpoint pour récupérer les places autorisées (protégé par challenge)
+app.get('/api/roblox/security/places', ...robloxSecurityMiddleware, async (req, res) => {
+	try {
+		const places = await securityAPI.getAuthorizedPlaces();
+		res.json({ places });
+	} catch (error) {
+		console.error('Get places error:', error);
+		res.status(500).json({ error: 'Failed to get places' });
+	}
+});
+
+// Endpoint pour récupérer le kill switch (protégé par challenge)
+app.get('/api/roblox/security/killswitch', ...robloxSecurityMiddleware, async (req, res) => {
+	try {
+		const enabled = await securityAPI.getKillSwitch();
+		res.json({ enabled });
+	} catch (error) {
+		console.error('Get killswitch error:', error);
+		res.status(500).json({ error: 'Failed to get killswitch status' });
+	}
+});
+
+// ===== ROUTES ADMIN (JWT auth) =====
 // Routes protégées (avec rate limiting)
 app.use('/api/security', apiLimiter, authMiddleware.verifyToken);
 
