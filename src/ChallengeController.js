@@ -10,7 +10,7 @@ import crypto from 'crypto';
 export class ChallengeController {
     constructor() {
         this.challenges = new Map(); // challengeToken -> { universeId, placeId, expiresAt }
-        this.CHALLENGE_TTL_MS = 10 * 1000; // 10 secondes
+        this.CHALLENGE_TTL_MS = 30 * 1000; // 30 secondes (augmenté pour gérer les délais réseau)
         this.CHALLENGE_SECRET = process.env.CHALLENGE_SECRET || this.generateSecret();
         
         // Nettoyer les challenges expirés toutes les 30 secondes
